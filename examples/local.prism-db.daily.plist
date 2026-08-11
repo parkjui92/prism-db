@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PRISM DB 일일 갱신 (macOS launchd)
+
+  설치 — __PRISM_DIR__ 를 실제 경로로 바꿔 넣는다:
+
+    PRISM_DIR="$HOME/prism-db"      # 클론한 위치
+    mkdir -p ~/Library/LaunchAgents ~/.prism
+    sed -e "s|__PRISM_DIR__|$PRISM_DIR|g" -e "s|__HOME__|$HOME|g" \
+      "$PRISM_DIR/examples/local.prism-db.daily.plist" \
+      > ~/Library/LaunchAgents/local.prism-db.daily.plist
+    launchctl load -w ~/Library/LaunchAgents/local.prism-db.daily.plist
+
+  cron이 아니라 launchd를 쓰는 이유: 절전으로 놓친 실행을 깨어난 직후 따라잡는다.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.prism-db.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__PRISM_DIR__/daily_update.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!--
+      launchd는 최소 환경으로 실행된다. python3가 표준 경로에 없으면(pyenv·Homebrew·
+      python.org 설치 등) 여기 PATH에 그 경로를 추가하거나 PRISM_PYTHON을 지정한다.
+    -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <!-- <key>PRISM_PYTHON</key><string>/path/to/python3</string> -->
+        <key>PRISM_BUDGET_GB</key>
+        <string>20</string>
+        <key>PRISM_FILES_PER_DAY</key>
+        <string>40</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/.prism/daily.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.prism/daily.log</string>
+
+    <!-- 로그인 시 즉시 실행하지 않는다(하루 1회 정시로 충분, 쿼터 낭비 방지). -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>Nice</key>
+    <integer>5</integer>
+</dict>
+</plist>
